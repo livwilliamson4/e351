@@ -18,10 +18,10 @@ class DetectBeacon(Node):
         self.get_logger().info('Starting Detect Beacon Node')
         qos_policy = QoSProfile(durability=QoSDurabilityPolicy.VOLATILE, reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=5)
 
-        self.subscriber_colour = self.create_subscription(Image, '/intel_realsense_r200_depth/image_raw', self.callback, qos_policy)
-        self.subscriber_depth = self.create_subscription(Image, '/intel_realsense_r200_depth/depth/image_raw', self.callback_depth, qos_policy)
-        self.subscriber_camera_info = self.create_subscription(CameraInfo, '/intel_realsense_r200_depth/camera_info', self.callback_cam_info, qos_policy)
-        self.move_pub = self.create_publisher(Twist, '/cmd_vel', 1)
+        self.subscriber_colour = self.create_subscription(Image, '/image_raw', self.callback, qos_policy)
+        #self.subscriber_depth = self.create_subscription(Image, '/intel_realsense_r200_depth/depth/image_raw', self.callback_depth, qos_policy)
+        self.subscriber_camera_info = self.create_subscription(CameraInfo, '/camera_info', self.callback_cam_info, qos_policy)
+        #self.move_pub = self.create_publisher(Twist, '/cmd_vel', 1)
 
         self.bridge = CvBridge()
         self.colour_frame = None
@@ -37,39 +37,6 @@ class DetectBeacon(Node):
         #while rclpy.ok():
         #    self.callback_mode()
         #    rclpy.spin_once(self, timeout_sec=3.0) 
-
-
-    def callback_mode(self):
-        resp = cv2.waitKey(80)
-        button_latch = False
-
-        if resp == ord('m') and button_latch == False: # change mode button
-            if self.park_mode == True:
-                self.park_mode = False
-                self.get_logger().info('Changing from park mode to follower mode...')
-            else:
-                self.park_mode = True
-                self.get_logger().info('Changing from follower mode to park mode...')
-            button_latch = True
-        elif resp != ord('m') and button_latch == True:
-            button_latch = False
-
-
-
-    def callback_depth(self, depth_image):
-        self.get_logger().info('[Image Processing] callback_depth')
-        self.depth_frame = self.bridge.imgmsg_to_cv2(depth_image, desired_encoding="passthrough") # will change for actual trailer
-        dh, dw = self.depth_frame.shape # diff for actual trailer
-        floor = 2*dh//3 # diff for actual trailer
-        self.depth_frame[floor:dh][:] = 100 # diff for actual trailer
-        self.closest_obstacle = self.depth_frame.min() #needs to not include bottom third (floor)
-        self.get_logger().info(f'minimum obstacle distance = {self.closest_obstacle}')
-
-        if self.closest_obstacle < 0.4: # wont be .min() for actual trailer. single point lidar. may be different number too
-            self.obstacle_detected = True
-            self.get_logger().info('Obstacle detected! Stopping movement & image processing.')
-        else:
-            self.obstacle_detected = False
 
 
     def callback(self, colour_image):
@@ -117,86 +84,10 @@ class DetectBeacon(Node):
                 self.colour_frame = cv2.rectangle(self.colour_frame, (x_g, y_g), (x_g+w_g, y_g+h_g), (200, 20, 0), 2)
             
             self.get_logger().info('Seeing green.')
+            print('See green')
         else:
             x_g = y_g = w_g = h_g = sec_lrg_contour = x_g2 = y_g2 = w_g2 = h_g2 = x_g_mid = y_g_mid = 0
-
-        mask_pink = cv2.inRange(hsv, pink_lower, pink_upper)
-        mask_pink = cv2.erode(mask_pink, None, iterations=2)
-        mask_pink = cv2.dilate(mask_pink, None, iterations=2)
-        contours = cv2.findContours(mask_pink.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) 
-        contours = imutils.grab_contours(contours)
-        if len(contours) != 0:
-            largest_contour = max(contours, key=cv2.contourArea)
-            x_p, y_p, w_p, h_p = cv2.boundingRect(largest_contour)
-            self.get_logger().info(f'pink len(contours) = {len(contours)}')
-            self.get_logger().info(f'x_p = {x_p}, y_p = {y_p}, w_p = {w_p}, h_p = {h_p}')
-
-            if len(contours) >=2:
-                i=0
-                while i <= len(contours):
-                    if contours[i].all() == largest_contour.all(): # error on this line, bool has no attribute all
-                        cont = list(contours)
-                        cont.pop(i)
-                        contours = tuple(cont)
-                        break
-                    i+=1
-                sec_lrg_contour = max(contours, key=cv2.contourArea)
-                x_p2, y_p2, w_p2, h_p2 = cv2.boundingRect(sec_lrg_contour)
-                self.get_logger().info(f'x_p2 = {x_p2}, y_p2 = {y_p2}, w_p2 = {w_p2}, h_p2 = {h_p2}')
-                if abs(y_p - y_p2) < 5:
-                    self.get_logger().info('pinks are level')
-                    x_p_mid = (x_p + (0.5*w_p) + x_p2 + (0.5*w_p2))/2
-                    y_p_mid = (y_p + (0.5*h_p) + y_p2 + (0.5*h_p2))/2
-                    self.colour_frame = cv2.rectangle(self.colour_frame, (min(x_p, x_p2), min(y_p, y_p2)), (max((x_p+w_p), (x_p2+w_p2)), max((y_p+h_p), (y_p2+h_p2))), (200, 20, 0), 2)
-            else:
-                x_p_mid = x_p + 0.5*w_p
-                y_p_mid = y_p + 0.5*h_p
-                self.colour_frame = cv2.rectangle(self.colour_frame, (x_p, y_p), (x_p+w_p, y_p+h_p), (200, 20, 0), 2)
-            
-            self.get_logger().info('Seeing pink')
-        else:
-            x_p = y_p = w_p = h_p = sec_lrg_contour = x_p2 = y_p2 = w_p2 = h_p2 = x_p_mid = y_p_mid = 0
-
-        if x_g_mid != 0 and x_p_mid != 0:
-            x_mid_diff = abs(x_g_mid - x_p_mid)
-            self.centre_of_user = (x_g_mid + x_p_mid)/2
-        else:
-            x_mid_diff = 10    
-        mask = mask_green + mask_pink
-        self.mask = mask
-
-        if x_mid_diff < 5 and y_g_mid < y_p_mid and y_g_mid != 0: # y values are zero at top and max at bottom. therefore if green is above pink its y value is LESS
-            self.user_in_frame = True
-            self.get_logger().info('User seen.')
-            stripe_width_top = (max(x_g, x_g2) - min((x_g+w_g), (x_g2+w_g2)))
-            stripe_width_bot = (max(x_p, x_p2) - min((x_p+w_p), (x_p2+w_p2)))
-            self.stripe_width = round((stripe_width_top + stripe_width_bot)/2)
-            self.get_logger().info(f'Stripe width = {self.stripe_width} pixels')
-        else:
-            self.user_in_frame = False
-
-
-    def callback_movement(self): # inputs are stripe width, obstacle and user seen flags, user centre error
-        correct_stripe_width = 8
-        correct_user_centre = 160 # camera width is 320. middle of camera = 320/2
-        twist = Twist()
-
-        if self.obstacle_detected == True or self.user_in_frame == False:
-            # set all movement to zero, maybe the setpoint?
-            twist.linear.x = 0
-            twist.angular.z = 0
-            self.get_logger().info('No movement')
-            return
-        
-        # PID loops
-        pid_stripe = PID(1, 0.1, 0.05, setpoint=correct_stripe_width)
-        pid_user_error = PID(1, 0.1, 0.05, setpoint=correct_user_centre)
-
-        # normalising to +-1
-
-
-        
-        
+   
 
     def callback_cam_info(self, camera_info):
         self.K = np.array(camera_info.k).reshape([3,3])
