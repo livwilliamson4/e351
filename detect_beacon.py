@@ -68,9 +68,9 @@ class DetectBeacon(Node):
 
     def callback(self, colour_image):
         # to find user. green on top, pink on bottom
-        self.get_logger().info('Now starting image processing.')
-        if self.obstacle_detected == True: # if obstacle detected, don't bother going through image processing
+        if self.park_mode == True: # if obstacle detected, don't bother going through image processing
             return
+        self.get_logger().info('Now starting image processing.')
         self.colour_frame = self.bridge.imgmsg_to_cv2(colour_image, "bgr8")
         blurred = cv2.GaussianBlur(self.colour_frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
