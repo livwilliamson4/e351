@@ -3,6 +3,7 @@ from rclpy.node import Node
 import imutils
 import numpy as np
 import cv2
+import RPi.GPIO as GPIO
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
 from cv_bridge import CvBridge
@@ -31,6 +32,13 @@ class DetectBeacon(Node):
         self.obstacle_detected = False
         self.user_in_frame = False
         self.park_mode = True
+        self.button_latch = False
+
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+        GPIO.setup(16,GPIO.OUT) # park mode LED
+        GPIO.setup(4,GPIO.OUT) # follower mode LED
+        GPIO.setup(22.GPIO.IN) # mode changer button
 
         #while rclpy.ok():
         #    self.callback_mode()
@@ -38,19 +46,25 @@ class DetectBeacon(Node):
 
 
     def callback_mode(self):
-        resp = cv2.waitKey(80)
-        button_latch = False
+        button_on = GPIO.input(22)
 
-        if resp == ord('m') and button_latch == False: # change mode button
+        if self.park_mode == True:
+            GPIO.output(4,GPIO.LOW)
+            GPIO.output(16,GPIO.HIGH)
+        else:
+            GPIO.output(16,GPIO.LOW)
+            GPIO.output(4,GPIO.HIGH)
+        
+        if button_on == 1 and self.button_latch == False: # change mode button
             if self.park_mode == True:
                 self.park_mode = False
-                self.get_logger().info('Changing from park mode to follower mode...')
+                self.get_logger().info('Now in follower mode.')
             else:
                 self.park_mode = True
-                self.get_logger().info('Changing from follower mode to park mode...')
-            button_latch = True
-        elif resp != ord('m') and button_latch == True:
-            button_latch = False
+                self.get_logger().info('Now in park mode.')
+            self.button_latch = True
+        elif button_on == 0 and self.button_latch == True:
+            self.button_latch = False
 
     def callback(self, colour_image):
         # to find user. green on top, pink on bottom
