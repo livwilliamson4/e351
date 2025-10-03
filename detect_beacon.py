@@ -16,9 +16,9 @@ class DetectBeacon(Node):
         self.get_logger().info('Starting Detect Beacon Node')
         qos_policy = QoSProfile(durability=QoSDurabilityPolicy.VOLATILE, reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=5)
 
-        self.subscriber_colour = self.create_subscription(Image, '/intel_realsense_r200_depth/image_raw', self.callback, qos_policy)
+        self.subscriber_colour = self.create_subscription(Image, '/image_raw', self.callback, qos_policy)
         #self.subscriber_depth = self.create_subscription(Image, '/intel_realsense_r200_depth/depth/image_raw', self.callback_depth, qos_policy)
-        self.subscriber_camera_info = self.create_subscription(CameraInfo, '/intel_realsense_r200_depth/camera_info', self.callback_cam_info, qos_policy)
+        self.subscriber_camera_info = self.create_subscription(CameraInfo, '/camera_info', self.callback_cam_info, qos_policy)
         #self.move_pub = self.create_publisher(Twist, '/cmd_vel', 1)
 
         self.bridge = CvBridge()
