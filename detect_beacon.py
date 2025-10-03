@@ -38,7 +38,7 @@ class DetectBeacon(Node):
         GPIO.setwarnings(False)
         GPIO.setup(16,GPIO.OUT) # park mode LED
         GPIO.setup(4,GPIO.OUT) # follower mode LED
-        GPIO.setup(22.GPIO.IN) # mode changer button
+        GPIO.setup(22,GPIO.IN) # mode changer button
 
         #while rclpy.ok():
         #    self.callback_mode()
