@@ -96,10 +96,13 @@ class DetectBeacon(Node):
             if len(contours) >= 2: #if it sees 2 or more patches of this green, which it should if it sees the stripe
                 i=0
                 while i <= len(contours):
-                    if contours[i].all() == largest_contour.all():
+                    self.get_logger().info(f'i={i}')
+                    x, y, w, h = cv2.boundingRect(contours[i])
+                    if x == x_g and y = y_g and w = w_g and h = h_g: #got _g values before.
                         cont = list(contours)
                         cont.pop(i)
                         contours = tuple(cont)
+                        self.get_logger().info(f'green: went through contours conversion at i={i}')
                         break
                     i+=1
                 sec_lrg_contour = max(contours, key=cv2.contourArea)
@@ -136,11 +139,12 @@ class DetectBeacon(Node):
                 i=0
                 while i <= len(contours):
                     self.get_logger().info(f'i = {i}')
-                    if contours[i].all() == largest_contour.all(): # error on this line, bool has no attribute all
+                    x, y, w, h = cv2.boundingRect(contours[i])
+                    if x == x_p and y = y_p and w = w_p and h = h_p: #got _g values before.
                         cont = list(contours)
                         cont.pop(i)
                         contours = tuple(cont)
-                        self.get_logger().info(f'went through contours conversion at i={i}')
+                        self.get_logger().info(f'pink: went through contours conversion at i={i}')
                         break
                     i+=1
                 sec_lrg_contour = max(contours, key=cv2.contourArea)
