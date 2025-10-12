@@ -90,24 +90,22 @@ class DetectBeacon(Node):
         if len(contours) != 0:
             largest_contour = max(contours, key=cv2.contourArea)
             x_g, y_g, w_g, h_g = cv2.boundingRect(largest_contour)
-            self.get_logger().info(f'green len(contours) = {len(contours)}')
-            self.get_logger().info(f'x_g = {x_g}, y_g = {y_g}, w_g = {w_g}, h_g = {h_g}')
+            #self.get_logger().info(f'green len(contours) = {len(contours)}')
+            #self.get_logger().info(f'x_g = {x_g}, y_g = {y_g}, w_g = {w_g}, h_g = {h_g}')
 
             if len(contours) >= 2: #if it sees 2 or more patches of this green, which it should if it sees the stripe
                 i=0
                 while i <= len(contours):
-                    self.get_logger().info(f'i={i}')
                     x, y, w, h = cv2.boundingRect(contours[i])
                     if x == x_g and y == y_g and w == w_g and h == h_g: #got _g values before.
                         cont = list(contours)
                         cont.pop(i)
                         contours = tuple(cont)
-                        self.get_logger().info(f'green: went through contours conversion at i={i}')
                         break
                     i+=1
                 sec_lrg_contour = max(contours, key=cv2.contourArea)
                 x_g2, y_g2, w_g2, h_g2 = cv2.boundingRect(sec_lrg_contour)
-                self.get_logger().info(f'x_g2 = {x_g2}, y_g2 = {y_g2}, w_g2 = {w_g2}, h_g2 = {h_g2}')
+                #self.get_logger().info(f'x_g2 = {x_g2}, y_g2 = {y_g2}, w_g2 = {w_g2}, h_g2 = {h_g2}')
                 if abs(y_g - y_g2) < 10: #if largest and second largest contours are (almost) in line, its the green we want
                     x_g_mid = (x_g + (0.5*w_g) + x_g2 + (0.5*w_g2))/2 #avg of mid of both contours
                     y_g_mid = (y_g + (0.5*h_g) + y_g2 + (0.5*h_g2))/2
@@ -119,8 +117,7 @@ class DetectBeacon(Node):
             else:
                 x_g_mid = 0
                 y_g_mid = 0
-            
-            self.get_logger().info('Seeing green.')
+
         else:
             x_g = y_g = w_g = h_g = sec_lrg_contour = x_g2 = y_g2 = w_g2 = h_g2 = x_g_mid = y_g_mid = 0
 
@@ -132,30 +129,27 @@ class DetectBeacon(Node):
         if len(contours) != 0:
             largest_contour = max(contours, key=cv2.contourArea)
             x_p, y_p, w_p, h_p = cv2.boundingRect(largest_contour)
-            self.get_logger().info(f'pink len(contours) = {len(contours)}')
-            self.get_logger().info(f'x_p = {x_p}, y_p = {y_p}, w_p = {w_p}, h_p = {h_p}')
+            #self.get_logger().info(f'pink len(contours) = {len(contours)}')
+            #self.get_logger().info(f'x_p = {x_p}, y_p = {y_p}, w_p = {w_p}, h_p = {h_p}')
 
             if len(contours) >=2:
                 i=0
                 while i <= len(contours):
-                    self.get_logger().info(f'i = {i}')
                     x, y, w, h = cv2.boundingRect(contours[i])
                     if x == x_p and y == y_p and w == w_p and h == h_p: #got _g values before.
                         cont = list(contours)
                         cont.pop(i)
                         contours = tuple(cont)
-                        self.get_logger().info(f'pink: went through contours conversion at i={i}')
                         break
                     i+=1
                 sec_lrg_contour = max(contours, key=cv2.contourArea)
                 x_p2, y_p2, w_p2, h_p2 = cv2.boundingRect(sec_lrg_contour)
-                self.get_logger().info(f'x_p2 = {x_p2}, y_p2 = {y_p2}, w_p2 = {w_p2}, h_p2 = {h_p2}')
+                #self.get_logger().info(f'x_p2 = {x_p2}, y_p2 = {y_p2}, w_p2 = {w_p2}, h_p2 = {h_p2}')
                 if abs(y_p - y_p2) < 10:
                     self.get_logger().info('pinks are level')
                     x_p_mid = (x_p + (0.5*w_p) + x_p2 + (0.5*w_p2))/2
                     y_p_mid = (y_p + (0.5*h_p) + y_p2 + (0.5*h_p2))/2
                     self.colour_frame = cv2.rectangle(self.colour_frame, (min(x_p, x_p2), min(y_p, y_p2)), (max((x_p+w_p), (x_p2+w_p2)), max((y_p+h_p), (y_p2+h_p2))), (200, 20, 0), 2)
-                    self.get_logger().info('pinks are level')
                 else:
                     x_p_mid = 0
                     y_p_mid = 0
@@ -163,7 +157,6 @@ class DetectBeacon(Node):
                 x_p_mid = 0
                 y_p_mid = 0
 
-            self.get_logger().info('Seeing pink')
         else:
             x_p = y_p = w_p = h_p = sec_lrg_contour = x_p2 = y_p2 = w_p2 = h_p2 = x_p_mid = y_p_mid = 0
 
