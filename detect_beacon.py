@@ -7,6 +7,7 @@ import RPi.GPIO as GPIO
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
 from cv_bridge import CvBridge
+from simple_pid import PID
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 
 
@@ -26,7 +27,6 @@ class DetectBeacon(Node):
         self.colour_frame = None
         self.depth_frame = None
         self.num_colour_images = 0
-        self.num_depth_images = 0
         self.K = None
 
         self.obstacle_detected = False
@@ -41,13 +41,10 @@ class DetectBeacon(Node):
         GPIO.setup(12,GPIO.OUT) # user seen LED
         GPIO.setup(22,GPIO.IN) # mode changer button
 
-        self.timer = self.create_timer(0.1, self.callback_mode)
+        self.timer_mode = self.create_timer(0.1, self.callback_mode)
+        self.timer_move = self.create_timer(0.1, self.callback_movement)
 
-        #while rclpy.ok():
-        #    self.callback_mode()
-        #    rclpy.spin_once(self, timeout_sec=3.0) 
-
-
+    
     def callback_mode(self):
         button_on = GPIO.input(22)
 
@@ -182,20 +179,24 @@ class DetectBeacon(Node):
 
 
     def callback_movement(self): # inputs are stripe width, obstacle and user seen flags, user centre error
-        correct_stripe_width = 30
+        correct_stripe_width = 190
         correct_user_centre = 320 # camera width is 640. middle of camera = 640/2
 
+        # set pid setpoints
         if self.obstacle_detected == True or self.user_in_frame == False:
-            # set all movement to zero, maybe the setpoint?
+            # set all movement to zero
             self.get_logger().info('No movement')
-            return
+            stripe_setpoint = 0
+        else:
+            stripe_setpoint = self.stripe_width
+        user_setpoint = self.centre_of_user
         
-        # PID loops, package not installed
-        #pid_stripe = PID(1, 0.1, 0.05, setpoint=correct_stripe_width)
-        #pid_user_error = PID(1, 0.1, 0.05, setpoint=correct_user_centre)
+        # PID loops
+        pid_stripe = PID(1, 0.1, 0.05, setpoint=stripe_setpoint)
+        pid_user_error = PID(1, 0.1, 0.05, setpoint=user_setpoint)
 
         # normalising to +-1
-
+        
 
         
         
