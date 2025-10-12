@@ -98,7 +98,7 @@ class DetectBeacon(Node):
                 while i <= len(contours):
                     self.get_logger().info(f'i={i}')
                     x, y, w, h = cv2.boundingRect(contours[i])
-                    if x == x_g and y = y_g and w = w_g and h = h_g: #got _g values before.
+                    if x == x_g and y == y_g and w == w_g and h == h_g: #got _g values before.
                         cont = list(contours)
                         cont.pop(i)
                         contours = tuple(cont)
@@ -140,7 +140,7 @@ class DetectBeacon(Node):
                 while i <= len(contours):
                     self.get_logger().info(f'i = {i}')
                     x, y, w, h = cv2.boundingRect(contours[i])
-                    if x == x_p and y = y_p and w = w_p and h = h_p: #got _g values before.
+                    if x == x_p and y == y_p and w == w_p and h == h_p: #got _g values before.
                         cont = list(contours)
                         cont.pop(i)
                         contours = tuple(cont)
