@@ -38,7 +38,10 @@ class DetectBeacon(Node):
         GPIO.setwarnings(False)
         GPIO.setup(16,GPIO.OUT) # park mode LED
         GPIO.setup(4,GPIO.OUT) # follower mode LED
+        GPIO.setup(12,GPIO.OUT) # user seen LED
         GPIO.setup(22,GPIO.IN) # mode changer button
+
+        self.timer = self.create_timer(0.1, self.callback_mode)
 
         #while rclpy.ok():
         #    self.callback_mode()
@@ -74,10 +77,10 @@ class DetectBeacon(Node):
         self.colour_frame = self.bridge.imgmsg_to_cv2(colour_image, "bgr8")
         blurred = cv2.GaussianBlur(self.colour_frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-        green_lower = (63, 200, 80)
-        green_upper = (78, 255, 255)
-        pink_lower = (148, 200, 80)
-        pink_upper = (163, 255, 255)
+        green_lower = (70, 150, 80)
+        green_upper = (85, 255, 255)
+        pink_lower = (225, 150, 80)
+        pink_upper = (240, 255, 255)
 
         mask_green = cv2.inRange(hsv, green_lower, green_upper)
         mask_green = cv2.erode(mask_green, None, iterations=2)
@@ -104,7 +107,8 @@ class DetectBeacon(Node):
                 if abs(y_g - y_g2) < 10: #if largest and second largest contours are (almost) in line, its the green we want
                     x_g_mid = (x_g + (0.5*w_g) + x_g2 + (0.5*w_g2))/2 #avg of mid of both contours
                     y_g_mid = (y_g + (0.5*h_g) + y_g2 + (0.5*h_g2))/2
-                    self.colour_frame = cv2.rectangle(self.colour_frame, (min(x_g, x_g2), min(y_g, y_g2)), (max((x_g+w_g), (x_g2+w_g2)), max((y_g+h_g), (y_g2+h_g2))), (200, 20, 0), 2)       
+                    self.colour_frame = cv2.rectangle(self.colour_frame, (min(x_g, x_g2), min(y_g, y_g2)), (max((x_g+w_g), (x_g2+w_g2)), max((y_g+h_g), (y_g2+h_g2))), (200, 20, 0), 2) 
+                    self.get_logger().info('greens are level')
                 else:
                     x_g_mid = 0
                     y_g_mid = 0
@@ -144,6 +148,7 @@ class DetectBeacon(Node):
                     x_p_mid = (x_p + (0.5*w_p) + x_p2 + (0.5*w_p2))/2
                     y_p_mid = (y_p + (0.5*h_p) + y_p2 + (0.5*h_p2))/2
                     self.colour_frame = cv2.rectangle(self.colour_frame, (min(x_p, x_p2), min(y_p, y_p2)), (max((x_p+w_p), (x_p2+w_p2)), max((y_p+h_p), (y_p2+h_p2))), (200, 20, 0), 2)
+                    self.get_logger().info('pinks are level')
                 else:
                     x_p_mid = 0
                     y_p_mid = 0
@@ -170,8 +175,10 @@ class DetectBeacon(Node):
             stripe_width_bot = (max((x_p+w_p), (x_p2+w_p2))) - min(x_p, x_p2)
             self.stripe_width = round((stripe_width_top + stripe_width_bot)/2)
             self.get_logger().info(f'Stripe width = {self.stripe_width} pixels')
+            GPIO.output(12,GPIO.HIGH)
         else:
             self.user_in_frame = False
+            GPIO.output(12,GPIO.LOW)
 
 
     def callback_movement(self): # inputs are stripe width, obstacle and user seen flags, user centre error
