@@ -104,6 +104,7 @@ class DetectBeacon(Node):
                     i+=1
                 sec_lrg_contour = max(contours, key=cv2.contourArea)
                 x_g2, y_g2, w_g2, h_g2 = cv2.boundingRect(sec_lrg_contour)
+                self.get_logger().info(f'x_g2 = {x_g2}, y_g2 = {y_g2}, w_g2 = {w_g2}, h_g2 = {h_g2}')
                 if abs(y_g - y_g2) < 10: #if largest and second largest contours are (almost) in line, its the green we want
                     x_g_mid = (x_g + (0.5*w_g) + x_g2 + (0.5*w_g2))/2 #avg of mid of both contours
                     y_g_mid = (y_g + (0.5*h_g) + y_g2 + (0.5*h_g2))/2
@@ -134,10 +135,12 @@ class DetectBeacon(Node):
             if len(contours) >=2:
                 i=0
                 while i <= len(contours):
+                    self.get_logger().info(f'i = {i}')
                     if contours[i].all() == largest_contour.all(): # error on this line, bool has no attribute all
                         cont = list(contours)
                         cont.pop(i)
                         contours = tuple(cont)
+                        self.get_logger().info(f'went through contours conversion at i={i}')
                         break
                     i+=1
                 sec_lrg_contour = max(contours, key=cv2.contourArea)
