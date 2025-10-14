@@ -21,7 +21,6 @@ class DetectBeacon(Node):
         self.subscriber_colour = self.create_subscription(Image, '/image_raw', self.callback, qos_policy)
         #self.subscriber_depth = self.create_subscription(Image, '/intel_realsense_r200_depth/depth/image_raw', self.callback_depth, qos_policy)
         self.subscriber_camera_info = self.create_subscription(CameraInfo, '/camera_info', self.callback_cam_info, qos_policy)
-        #self.move_pub = self.create_publisher(Twist, '/cmd_vel', 1)
 
         self.bridge = CvBridge()
         self.colour_frame = None
@@ -34,13 +33,22 @@ class DetectBeacon(Node):
         self.park_mode = True
         self.button_latch = False
 
+        # GPIO setup
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         GPIO.setup(16,GPIO.OUT) # park mode LED
         GPIO.setup(4,GPIO.OUT) # follower mode LED
         GPIO.setup(12,GPIO.OUT) # user seen LED
         GPIO.setup(22,GPIO.IN) # mode changer button
-
+        GPIO.setup(17,GPIO.OUT) # AIN1
+        GPIO.setup(18,GPIO.OUT) # PWMA
+        GPIO.setup(23,GPIO.OUT) # BIN1
+        GPIO.setup(24,GPIO.OUT) # PWMB
+        self.left_pwm = GPIO.PWM(18, 1000)
+        self.right_pwm = SPIO.PWM(24, 1000)
+        self.left_pwm.start(0.0)
+        self.right_pwm.start(0.0)
+        
         self.timer_mode = self.create_timer(0.1, self.callback_mode)
         self.timer_move = self.create_timer(0.1, self.callback_movement)
 
@@ -190,6 +198,10 @@ class DetectBeacon(Node):
         else:
             stripe_setpoint = self.stripe_width
         user_setpoint = self.centre_of_user
+
+        # normalising to +-1
+        if stripe_setpoint < 190:
+            norm_stripe = 0 #fix
         
         # PID loops
         pid_stripe = PID(1, 0.1, 0.05, setpoint=stripe_setpoint)
