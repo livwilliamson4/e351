@@ -50,7 +50,7 @@ class DetectBeacon(Node):
         self.right_pwm.start(0.0)
         
         self.timer_mode = self.create_timer(0.1, self.callback_mode)
-        self.timer_move = self.create_timer(0.1, self.callback_movement)
+        #self.timer_move = self.create_timer(0.1, self.callback_movement)
 
     
     def callback_mode(self):
