@@ -45,7 +45,7 @@ class DetectBeacon(Node):
         GPIO.setup(23,GPIO.OUT) # BIN1
         GPIO.setup(24,GPIO.OUT) # PWMB
         self.left_pwm = GPIO.PWM(18, 1000)
-        self.right_pwm = SPIO.PWM(24, 1000)
+        self.right_pwm = GPIO.PWM(24, 1000)
         self.left_pwm.start(0.0)
         self.right_pwm.start(0.0)
         
