@@ -13,25 +13,26 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReli
 
 class DetectBeacon(Node):
     def __init__(self):
-        # Initialise subs, pubs, service calls, path object
         super().__init__('detect_beacon')
         self.get_logger().info('Starting Detect Beacon Node')
         qos_policy = QoSProfile(durability=QoSDurabilityPolicy.VOLATILE, reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=5)
 
-        self.subscriber_colour = self.create_subscription(Image, '/image_raw', self.callback, qos_policy)
+        # Initialising subscribers
+        self.subscriber_colour = self.create_subscription(Image, '/image_raw', self.callback_imgpro, qos_policy)
         #self.subscriber_depth = self.create_subscription(Image, '/intel_realsense_r200_depth/depth/image_raw', self.callback_depth, qos_policy)
         self.subscriber_camera_info = self.create_subscription(CameraInfo, '/camera_info', self.callback_cam_info, qos_policy)
 
+        # Initialising flags        
         self.bridge = CvBridge()
         self.colour_frame = None
         self.depth_frame = None
-        self.num_colour_images = 0
         self.K = None
-
         self.obstacle_detected = False
         self.user_in_frame = False
         self.park_mode = True
         self.button_latch = False
+        self.speed = 0
+        self.steer = 0
 
         # GPIO setup
         GPIO.setmode(GPIO.BCM)
@@ -48,12 +49,13 @@ class DetectBeacon(Node):
         self.right_pwm = GPIO.PWM(24, 1000)
         self.left_pwm.start(0.0)
         self.right_pwm.start(0.0)
-        
+
+        # Timers to invoke callbacks
         self.timer_mode = self.create_timer(0.1, self.callback_mode)
         #self.timer_move = self.create_timer(0.1, self.callback_movement)
 
     
-    def callback_mode(self):
+    def callback_mode(self): # To change modes
         button_on = GPIO.input(22)
 
         if self.park_mode == True:
@@ -74,8 +76,7 @@ class DetectBeacon(Node):
         elif button_on == 0 and self.button_latch == True:
             self.button_latch = False
 
-    def callback(self, colour_image):
-        # to find user. green on top, pink on bottom
+    def callback_imgpro(self, colour_image): # Image processing
         if self.park_mode == True: # if obstacle detected, don't bother going through image processing
             return
         self.get_logger().info('Now starting image processing.')
@@ -87,6 +88,7 @@ class DetectBeacon(Node):
         pink_lower = (160, 150, 80)
         pink_upper = (170, 255, 255)
 
+        # Green detection
         mask_green = cv2.inRange(hsv, green_lower, green_upper)
         mask_green = cv2.erode(mask_green, None, iterations=2)
         mask_green = cv2.dilate(mask_green, None, iterations=2)
@@ -126,6 +128,7 @@ class DetectBeacon(Node):
         else:
             x_g = y_g = w_g = h_g = sec_lrg_contour = x_g2 = y_g2 = w_g2 = h_g2 = x_g_mid = y_g_mid = 0
 
+        # Pink detection
         mask_pink = cv2.inRange(hsv, pink_lower, pink_upper)
         mask_pink = cv2.erode(mask_pink, None, iterations=2)
         mask_pink = cv2.dilate(mask_pink, None, iterations=2)
@@ -187,36 +190,54 @@ class DetectBeacon(Node):
             GPIO.output(12,GPIO.LOW)
 
 
-    def callback_movement(self): # inputs are stripe width, obstacle and user seen flags, user centre error
-        correct_stripe_width = 190
-        correct_user_centre = 320 # camera width is 640. middle of camera = 640/2
-
+    def callback_set_movement(self): # inputs are stripe width, user centre error, obstacle and user seen flags
         # set pid setpoints
-        if self.obstacle_detected == True or self.user_in_frame == False:
+        if self.obstacle_detected == True or self.user_in_frame == False or self.park_mode == True:
             # set all movement to zero
             #self.get_logger().info('No movement')
-            stripe_setpoint = 0
+            self.norm_stripe = 0
+            self.norm_user = 0
+            return
+
+        # normalising stripe width (should be [140,190]) to [0,1]. 
+        if self.stripe_width > 190 or self.stripe_width == 0:
+            self.norm_stripe = 0
+        elif self.stripe_width < 140:
+            self.norm_stripe = 1
         else:
-            stripe_setpoint = self.stripe_width
-        user_setpoint = self.centre_of_user
+            self.norm_stripe = -1*(self.stripe_width - 190)/50
+            
+        # normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
+        self.norm_user = (self.centre_of_user - 320)/320
 
-        # normalising stripe width to +-1
-        if stripe_setpoint < 190:
-            norm_stripe = 0 #fix
 
-        # normalising centre of user to +-1
-        norm_user = (user_setpoint - 320)/320
-    
+    def callback_do_movement(self): # inputs are normalised stripe and user values
         # PID loops
-        #pid_stripe = PID(1, 0.1, 0.05, setpoint=stripe_setpoint)
-        #pid_user_error = PID(1, 0.1, 0.05, setpoint=user_setpoint)
+        pid_stripe = PID(1, 0.1, 0.05, setpoint=self.norm_stripe)
+        pid_steering = PID(1, 0.1, 0.05, setpoint=self.norm_user)
 
-        # normalising to +-1
+        self.speed = pid_stripe(self.speed)
+        self.steer = pid_steering(self.steer)
         
+        # Steering multipliers
+        if self.steer in range(-1, -0.05):
+            left_mult = 1 + self.steer
+            right_mult = 1
+            self.get_logger().info(f'Veering left by {left_mult}')
+        elif self.steer in range(0.05, 1):
+            left_mult = 1
+            right_mult = 1 - self.steer
+            self.get_logger().info(f'Veering right by {right_mult}')
+        else:
+            left_mult = 1
+            right_mult = 1
+            self.get_logger().info('Going straight.')
+
+        # PWM signals to GPIO
+        self.left_pwm.ChangeDutyCycle(self.speed * left_mult)
+        self.right_pwm.ChangeDutyCycle(self.speed * right_mult)
 
         
-        
-
     def callback_cam_info(self, camera_info):
         self.K = np.array(camera_info.k).reshape([3,3])
 
@@ -232,8 +253,6 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
 
 
 
