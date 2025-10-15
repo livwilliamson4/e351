@@ -197,15 +197,15 @@ class DetectBeacon(Node):
             stripe_setpoint = 0
         else:
             stripe_setpoint = self.stripe_width
-        user_setpoint = self.centre_of_user
+        #user_setpoint = self.centre_of_user
 
         # normalising to +-1
-        if stripe_setpoint < 190:
+        #if stripe_setpoint < 190:
             norm_stripe = 0 #fix
         
         # PID loops
-        pid_stripe = PID(1, 0.1, 0.05, setpoint=stripe_setpoint)
-        pid_user_error = PID(1, 0.1, 0.05, setpoint=user_setpoint)
+        #pid_stripe = PID(1, 0.1, 0.05, setpoint=stripe_setpoint)
+        #pid_user_error = PID(1, 0.1, 0.05, setpoint=user_setpoint)
 
         # normalising to +-1
         
