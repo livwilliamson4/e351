@@ -169,7 +169,8 @@ class DetectBeacon(Node):
             x_mid_diff = abs(x_g_mid - x_p_mid)
             self.centre_of_user = (x_g_mid + x_p_mid)/2
         else:
-            x_mid_diff = 10    
+            x_mid_diff = 10
+            self.centre_of_user = 0
         mask = mask_green + mask_pink
         self.mask = mask
 
@@ -193,16 +194,19 @@ class DetectBeacon(Node):
         # set pid setpoints
         if self.obstacle_detected == True or self.user_in_frame == False:
             # set all movement to zero
-            self.get_logger().info('No movement')
+            #self.get_logger().info('No movement')
             stripe_setpoint = 0
         else:
             stripe_setpoint = self.stripe_width
-        #user_setpoint = self.centre_of_user
+        user_setpoint = self.centre_of_user
 
-        # normalising to +-1
-        #if stripe_setpoint < 190:
+        # normalising stripe width to +-1
+        if stripe_setpoint < 190:
             norm_stripe = 0 #fix
-        
+
+        # normalising centre of user to +-1
+        norm_user = (user_setpoint - 320)/320
+    
         # PID loops
         #pid_stripe = PID(1, 0.1, 0.05, setpoint=stripe_setpoint)
         #pid_user_error = PID(1, 0.1, 0.05, setpoint=user_setpoint)
