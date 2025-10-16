@@ -41,10 +41,10 @@ class DetectBeacon(Node):
         GPIO.setup(4,GPIO.OUT) # follower mode LED
         GPIO.setup(12,GPIO.OUT) # user seen LED
         GPIO.setup(22,GPIO.IN) # mode changer button
-        GPIO.setup(17,GPIO.OUT) # AIN1
-        GPIO.setup(18,GPIO.OUT) # PWMA
-        GPIO.setup(23,GPIO.OUT) # BIN1
-        GPIO.setup(24,GPIO.OUT) # PWMB
+        GPIO.setup(17,GPIO.OUT, initial=GPIO.HIGH) # AIN1
+        GPIO.setup(18,GPIO.OUT, initial=GPIO.LOW) # PWMA
+        GPIO.setup(23,GPIO.OUT, initial=GPIO.HIGH) # BIN1
+        GPIO.setup(24,GPIO.OUT, initial=GPIO.LOW) # PWMB
         self.left_pwm = GPIO.PWM(18, 1000)
         self.right_pwm = GPIO.PWM(24, 1000)
         self.left_pwm.start(0.0)
@@ -248,8 +248,8 @@ class DetectBeacon(Node):
         self.get_logger().info(f'right pwm = {self.speed * right_mult * 100}')
         
         # PWM signals to GPIO
-        self.left_pwm.ChangeDutyCycle(self.speed * left_mult * 100)
-        self.right_pwm.ChangeDutyCycle(self.speed * right_mult * 100)
+        self.left_pwm.ChangeDutyCycle(round(self.speed * left_mult * 100))
+        self.right_pwm.ChangeDutyCycle(round(self.speed * right_mult * 100))
 
         
     def callback_cam_info(self, camera_info):
