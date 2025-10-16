@@ -241,9 +241,12 @@ class DetectBeacon(Node):
             right_mult = 1
             self.get_logger().info('Going straight.')
 
+        if self.speed < 0:
+            self.speed = 0
+        
         # PWM signals to GPIO
-        self.left_pwm.ChangeDutyCycle(self.speed * left_mult)
-        self.right_pwm.ChangeDutyCycle(self.speed * right_mult)
+        self.left_pwm.ChangeDutyCycle(self.speed * left_mult * 100)
+        self.right_pwm.ChangeDutyCycle(self.speed * right_mult * 100)
 
         
     def callback_cam_info(self, camera_info):
