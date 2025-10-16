@@ -78,7 +78,7 @@ class DetectBeacon(Node):
             self.button_latch = False
 
     def callback_imgpro(self, colour_image): # Image processing
-        if self.park_mode == True: # if obstacle detected, don't bother going through image processing
+        if self.park_mode == True or self.obstacle_detected == True: # if in park or obstacle detected, don't bother going through image processing
             return
         self.get_logger().info('Now starting image processing.')
         self.colour_frame = self.bridge.imgmsg_to_cv2(colour_image, "bgr8")
@@ -169,15 +169,15 @@ class DetectBeacon(Node):
         else:
             x_p = y_p = w_p = h_p = sec_lrg_contour = x_p2 = y_p2 = w_p2 = h_p2 = x_p_mid = y_p_mid = 0
 
+        # Determining centre of user
         if x_g_mid != 0 and x_p_mid != 0:
             x_mid_diff = abs(x_g_mid - x_p_mid)
             self.centre_of_user = (x_g_mid + x_p_mid)/2
         else:
             x_mid_diff = 10
             self.centre_of_user = 0
-        mask = mask_green + mask_pink
-        self.mask = mask
 
+        # Is the user seen?
         if x_mid_diff < 5 and y_g_mid < y_p_mid and y_g_mid != 0: # y values are zero at top and max at bottom. therefore if green is above pink its y value is LESS
             self.user_in_frame = True
             self.get_logger().info('User seen.')
@@ -192,7 +192,7 @@ class DetectBeacon(Node):
 
 
     def callback_set_movement(self): # inputs are stripe width, user centre error, obstacle and user seen and park mode flags. outputs are 2 normalised values
-        # set pid setpoints
+        # Set PID setpoints
         if self.obstacle_detected == True or self.user_in_frame == False or self.park_mode == True:
             # set all movement to zero
             #self.get_logger().info('No movement')
@@ -200,7 +200,7 @@ class DetectBeacon(Node):
             self.norm_user = 0
             return
 
-        # normalising stripe width (should be [140,190]) to [0,1]. 
+        # Normalising stripe width (should be [140,190]) to [0,1]. 
         if self.stripe_width > 190 or self.stripe_width == 0:
             self.norm_stripe = 0
         elif self.stripe_width < 140:
@@ -208,17 +208,21 @@ class DetectBeacon(Node):
         else:
             self.norm_stripe = -1*(self.stripe_width - 190)/50
             
-        # normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
+        # Normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
         self.norm_user = (self.centre_of_user - 320)/320
 
 
     def callback_do_movement(self): # inputs are normalised stripe and user values
+        # Statement to not execute code if not required (i.e. set point is zero and speed is zero)
+        if self.norm_stripe == 0 and self.speed == 0:
+            return
+        
         # PID loops
-        pid_stripe = PID(1, 0.1, 0.05, setpoint=self.norm_stripe)
-        pid_steering = PID(1, 0.1, 0.05, setpoint=self.norm_user)
+        pid_stripe = PID(1, 0.1, 0.05, setpoint=0) # 0 is vest as 190 pixels wide which is ideal following distance
+        pid_steering = PID(1, 0.1, 0.05, setpoint=0) # 0 is user at centre which is ideal
 
-        self.speed = pid_stripe(self.speed)
-        self.steer = pid_steering(self.steer)
+        self.speed = pid_stripe(self.norm_stripe)
+        self.steer = pid_steering(self.norm_user)
         
         # Steering multipliers
         if self.steer in range(-1, -0.05):
