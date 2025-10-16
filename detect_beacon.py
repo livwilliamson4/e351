@@ -28,11 +28,15 @@ class DetectBeacon(Node):
         self.depth_frame = None
         self.K = None
         self.obstacle_detected = False
+        self.ob_latch = False
         self.user_in_frame = False
         self.park_mode = True
         self.button_latch = False
         self.speed = 0
         self.steer = 0
+        self.lidar_distance = 1
+
+        print('Now in park mode.')
 
         # GPIO setup
         GPIO.setmode(GPIO.BCM)
@@ -69,18 +73,35 @@ class DetectBeacon(Node):
         if button_on == 1 and self.button_latch == False: # change mode button
             if self.park_mode == True:
                 self.park_mode = False
-                self.get_logger().info('Now in follower mode.')
+                print('Now in follower mode.')
             else:
                 self.park_mode = True
-                self.get_logger().info('Now in park mode.')
+                print('Now in park mode.')
             self.button_latch = True
         elif button_on == 0 and self.button_latch == True:
             self.button_latch = False
 
+    def callback_depth(self):
+        if self.park_mode == True:
+            return
+        
+        #self.lidar_distance = GPIO.input(X) # may need to scale
+        
+        if self.lidar_distance < 0.3:
+            self.obstacle_detected = True
+            if self.ob_latch == False: # Latching so it only prints message once
+                print('Obstacle detected! Stopping movement & image processing.')
+            self.ob_latch = True
+        else:
+            self.obstacle_detected = False
+            if self.ob_latch == True:
+                print('Obstacle cleared! Continuing movement.')
+            self.ob_latch = False
+    
     def callback_imgpro(self, colour_image): # Image processing
         if self.park_mode == True or self.obstacle_detected == True: # if in park or obstacle detected, don't bother going through image processing
             return
-        self.get_logger().info('Now starting image processing.')
+        #self.get_logger().info('Now starting image processing.')
         self.colour_frame = self.bridge.imgmsg_to_cv2(colour_image, "bgr8")
         blurred = cv2.GaussianBlur(self.colour_frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
@@ -118,7 +139,7 @@ class DetectBeacon(Node):
                     x_g_mid = (x_g + (0.5*w_g) + x_g2 + (0.5*w_g2))/2 #avg of mid of both contours
                     y_g_mid = (y_g + (0.5*h_g) + y_g2 + (0.5*h_g2))/2
                     self.colour_frame = cv2.rectangle(self.colour_frame, (min(x_g, x_g2), min(y_g, y_g2)), (max((x_g+w_g), (x_g2+w_g2)), max((y_g+h_g), (y_g2+h_g2))), (200, 20, 0), 2) 
-                    self.get_logger().info('greens are level')
+                    #self.get_logger().info('greens are level')
                 else:
                     x_g_mid = 0
                     y_g_mid = 0
@@ -155,7 +176,7 @@ class DetectBeacon(Node):
                 x_p2, y_p2, w_p2, h_p2 = cv2.boundingRect(sec_lrg_contour)
                 #self.get_logger().info(f'x_p2 = {x_p2}, y_p2 = {y_p2}, w_p2 = {w_p2}, h_p2 = {h_p2}')
                 if abs(y_p - y_p2) < 10:
-                    self.get_logger().info('pinks are level')
+                    #self.get_logger().info('pinks are level')
                     x_p_mid = (x_p + (0.5*w_p) + x_p2 + (0.5*w_p2))/2
                     y_p_mid = (y_p + (0.5*h_p) + y_p2 + (0.5*h_p2))/2
                     self.colour_frame = cv2.rectangle(self.colour_frame, (min(x_p, x_p2), min(y_p, y_p2)), (max((x_p+w_p), (x_p2+w_p2)), max((y_p+h_p), (y_p2+h_p2))), (200, 20, 0), 2)
@@ -180,11 +201,10 @@ class DetectBeacon(Node):
         # Is the user seen?
         if x_mid_diff < 5 and y_g_mid < y_p_mid and y_g_mid != 0: # y values are zero at top and max at bottom. therefore if green is above pink its y value is LESS
             self.user_in_frame = True
-            self.get_logger().info('User seen.')
             stripe_width_top = (max((x_g+w_g), (x_g2+w_g2))) - min(x_g, x_g2)
             stripe_width_bot = (max((x_p+w_p), (x_p2+w_p2))) - min(x_p, x_p2)
             self.stripe_width = round((stripe_width_top + stripe_width_bot)/2)
-            self.get_logger().info(f'Stripe width = {self.stripe_width} pixels')
+            print(f'User seen. Stripe width = {self.stripe_width} pixels')
             GPIO.output(12,GPIO.HIGH)
         else:
             self.user_in_frame = False
@@ -194,16 +214,16 @@ class DetectBeacon(Node):
     def callback_set_movement(self): # inputs are stripe width, user centre error, obstacle and user seen and park mode flags. outputs are 2 normalised values
         # Set PID setpoints
         if self.obstacle_detected == True or self.user_in_frame == False or self.park_mode == True:
-            # set all movement to zero
+            # Set all movement to zero
             #self.get_logger().info('No movement')
             self.norm_stripe = 0
             self.norm_user = 0
             return
 
-        # Normalising stripe width (should be [140,190]) to [0,1]. 
-        if self.stripe_width > 190 or self.stripe_width == 0:
+        # Normalising stripe width (should be [90,190]) to [0,1]. 
+        if self.stripe_width > 190 or self.stripe_width == 0: # If wider than 190 pixels (closer than min following distance) or can't see (should be able to but just in case), set point to zero
             self.norm_stripe = 0
-        elif self.stripe_width < 90:
+        elif self.stripe_width < 90: # Max speed when stripe is smaller than 90 pixels wide
             self.norm_stripe = 1
         else:
             self.norm_stripe = 1*(self.stripe_width - 190)/100
@@ -224,29 +244,34 @@ class DetectBeacon(Node):
         self.speed = round(pid_stripe(self.norm_stripe), 3)
         self.steer = round(pid_steering(self.norm_user), 3)
 
-        self.get_logger().info(f'self.speed = {self.speed}')
-        self.get_logger().info(f'self.steer = {self.steer}')
+        #self.get_logger().info(f'self.speed = {self.speed}')
+        #self.get_logger().info(f'self.steer = {self.steer}')
         
-        # Steering multipliers
+        # Steering multipliers with +-0.05 deadband
         if self.steer > -1 and self.steer < -0.05:
             left_mult = 1 + self.steer
             right_mult = 1
-            self.get_logger().info(f'Veering left by {left_mult}')
+            #self.get_logger().info(f'Veering left by {left_mult}')
         elif self.steer > 0.05 and self.steer < 1:
             left_mult = 1
             right_mult = 1 - self.steer
-            self.get_logger().info(f'Veering right by {right_mult}')
+            #self.get_logger().info(f'Veering right by {right_mult}')
         else:
             left_mult = 1
             right_mult = 1
-            self.get_logger().info('Going straight.')
+            #self.get_logger().info('Going straight.')
 
         if self.speed < 0:
             self.speed = 0
 
         # PWM signals to GPIO
-        self.left_pwm.ChangeDutyCycle(round(self.speed * left_mult * 100)) # must be whole number bewteen 0 and 100
-        self.right_pwm.ChangeDutyCycle(round(self.speed * right_mult * 100))
+        left_pwm_signal = round(self.speed * left_mult * 100) # must be whole number bewteen 0 and 100
+        right_pwm_signal = round(self.speed * right_mult * 100)
+        
+        self.left_pwm.ChangeDutyCycle(left_pwm_signal)
+        self.right_pwm.ChangeDutyCycle(right_pwm_signal)
+
+        print(f'Left PWM Signal: {left_pwm_signal}  Right PWM Signal: {right_pwm_signal}')
 
         
     def callback_cam_info(self, camera_info):
