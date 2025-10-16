@@ -223,13 +223,16 @@ class DetectBeacon(Node):
 
         self.speed = pid_stripe(self.norm_stripe)
         self.steer = pid_steering(self.norm_user)
+
+        self.get_logger().info(f'self.speed = {self.speed}')
+        self.get_logger().info(f'self.steer = {self.steer}')
         
         # Steering multipliers
-        if self.steer in range(-1, -0.05):
+        if self.steer > -1 and self.steer < -0.05:
             left_mult = 1 + self.steer
             right_mult = 1
             self.get_logger().info(f'Veering left by {left_mult}')
-        elif self.steer in range(0.05, 1):
+        elif self.steer > 0.05 and self.steer < 1:
             left_mult = 1
             right_mult = 1 - self.steer
             self.get_logger().info(f'Veering right by {right_mult}')
