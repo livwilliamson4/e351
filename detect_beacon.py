@@ -203,10 +203,10 @@ class DetectBeacon(Node):
         # Normalising stripe width (should be [140,190]) to [0,1]. 
         if self.stripe_width > 190 or self.stripe_width == 0:
             self.norm_stripe = 0
-        elif self.stripe_width < 140:
+        elif self.stripe_width < 90:
             self.norm_stripe = 1
         else:
-            self.norm_stripe = -1*(self.stripe_width - 190)/50
+            self.norm_stripe = 1*(self.stripe_width - 190)/100
             
         # Normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
         self.norm_user = (self.centre_of_user - 320)/320
@@ -216,6 +216,9 @@ class DetectBeacon(Node):
         # Statement to not execute code if not required (i.e. set point is zero and speed is zero)
         if self.norm_stripe == 0 and self.speed == 0:
             return
+
+        self.get_logger().info(f'before pid: self.speed = {self.speed}')
+        self.get_logger().info(f'before pid: self.steer = {self.steer}')
         
         # PID loops
         pid_stripe = PID(1, 0.1, 0.05, setpoint=0) # 0 is vest as 190 pixels wide which is ideal following distance
