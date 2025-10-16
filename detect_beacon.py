@@ -52,7 +52,8 @@ class DetectBeacon(Node):
 
         # Timers to invoke callbacks
         self.timer_mode = self.create_timer(0.1, self.callback_mode)
-        #self.timer_move = self.create_timer(0.1, self.callback_movement)
+        self.timer_set_move = self.create_timer(0.1, self.callback_set_movement)
+        self.timer_do_move = self.create_timer(0.1, self.callback_do_movement)
 
     
     def callback_mode(self): # To change modes
@@ -190,7 +191,7 @@ class DetectBeacon(Node):
             GPIO.output(12,GPIO.LOW)
 
 
-    def callback_set_movement(self): # inputs are stripe width, user centre error, obstacle and user seen flags
+    def callback_set_movement(self): # inputs are stripe width, user centre error, obstacle and user seen and park mode flags. outputs are 2 normalised values
         # set pid setpoints
         if self.obstacle_detected == True or self.user_in_frame == False or self.park_mode == True:
             # set all movement to zero
