@@ -221,8 +221,8 @@ class DetectBeacon(Node):
         pid_stripe = PID(1, 0.1, 0.05, setpoint=0) # 0 is vest as 190 pixels wide which is ideal following distance
         pid_steering = PID(1, 0.1, 0.05, setpoint=0) # 0 is user at centre which is ideal
 
-        self.speed = pid_stripe(self.norm_stripe)
-        self.steer = pid_steering(self.norm_user)
+        self.speed = round(pid_stripe(self.norm_stripe), 3)
+        self.steer = round(pid_steering(self.norm_user), 3)
 
         self.get_logger().info(f'self.speed = {self.speed}')
         self.get_logger().info(f'self.steer = {self.steer}')
@@ -244,11 +244,8 @@ class DetectBeacon(Node):
         if self.speed < 0:
             self.speed = 0
 
-        self.get_logger().info(f'left pwm = {self.speed * left_mult * 100}')
-        self.get_logger().info(f'right pwm = {self.speed * right_mult * 100}')
-        
         # PWM signals to GPIO
-        self.left_pwm.ChangeDutyCycle(round(self.speed * left_mult * 100))
+        self.left_pwm.ChangeDutyCycle(round(self.speed * left_mult * 100)) # must be whole number bewteen 0 and 100
         self.right_pwm.ChangeDutyCycle(round(self.speed * right_mult * 100))
 
         
