@@ -216,10 +216,7 @@ class DetectBeacon(Node):
         # Statement to not execute code if not required (i.e. set point is zero and speed is zero)
         if self.norm_stripe == 0 and self.speed == 0:
             return
-
-        self.get_logger().info(f'before pid: self.speed = {self.speed}')
-        self.get_logger().info(f'before pid: self.steer = {self.steer}')
-        
+  
         # PID loops
         pid_stripe = PID(1, 0.1, 0.05, setpoint=0) # 0 is vest as 190 pixels wide which is ideal following distance
         pid_steering = PID(1, 0.1, 0.05, setpoint=0) # 0 is user at centre which is ideal
@@ -246,6 +243,9 @@ class DetectBeacon(Node):
 
         if self.speed < 0:
             self.speed = 0
+
+        self.get_logger().info(f'left pwm = {self.speed * left_mult * 100}')
+        self.get_logger().info(f'right pwm = {self.speed * right_mult * 100}')
         
         # PWM signals to GPIO
         self.left_pwm.ChangeDutyCycle(self.speed * left_mult * 100)
