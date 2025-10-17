@@ -223,10 +223,11 @@ class DetectBeacon(Node):
         # Normalising stripe width (should be [90,190]) to [0,1]. 
         if self.stripe_width > 190 or self.stripe_width == 0: # If wider than 190 pixels (closer than min following distance) or can't see (should be able to but just in case), set point to zero
             self.norm_stripe = 0
-        elif self.stripe_width < 90: # Max speed when stripe is smaller than 90 pixels wide
-            self.norm_stripe = 1
         else:
             self.norm_stripe = 1*(self.stripe_width - 190)/100
+
+        if self.norm_stripe > 1: # 1 is max speed
+            self.norm_stripe = 1
             
         # Normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
         self.norm_user = (self.centre_of_user - 320)/320
