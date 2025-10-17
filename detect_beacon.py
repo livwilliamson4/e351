@@ -244,7 +244,7 @@ class DetectBeacon(Node):
         self.speed = round(pid_stripe(self.norm_stripe), 3)
         self.steer = round(pid_steering(self.norm_user), 3)
 
-        #self.get_logger().info(f'self.speed = {self.speed}')
+        self.get_logger().info(f'self.speed = {self.speed}')
         #self.get_logger().info(f'self.steer = {self.steer}')
         
         # Steering multipliers with +-0.05 deadband
