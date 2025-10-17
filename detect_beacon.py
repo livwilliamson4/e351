@@ -223,12 +223,11 @@ class DetectBeacon(Node):
         # Normalising stripe width (should be [90,190]) to [0,1]. 
         if self.stripe_width > 190 or self.stripe_width == 0: # If wider than 190 pixels (closer than min following distance) or can't see (should be able to but just in case), set point to zero
             self.norm_stripe = 0
+        #elif self.stripe_width < 90:
+            #self.norm_stripe = 1
         else:
             self.norm_stripe = 1*(self.stripe_width - 190)/100
 
-        if self.norm_stripe > 1: # 1 is max speed
-            self.norm_stripe = 1
-            
         # Normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
         self.norm_user = (self.centre_of_user - 320)/320
 
@@ -244,6 +243,11 @@ class DetectBeacon(Node):
 
         self.speed = round(pid_stripe(self.norm_stripe), 3)
         self.steer = round(pid_steering(self.norm_user), 3)
+
+        if self.speed > 1:
+            self.speed = 1
+        elif self.speed < 0:
+            self.speed = 0
 
         self.get_logger().info(f'self.speed = {self.speed}')
         #self.get_logger().info(f'self.steer = {self.steer}')
@@ -261,9 +265,6 @@ class DetectBeacon(Node):
             left_mult = 1
             right_mult = 1
             #self.get_logger().info('Going straight.')
-
-        if self.speed < 0:
-            self.speed = 0
 
         # PWM signals to GPIO
         left_pwm_signal = round(self.speed * left_mult * 100) # must be whole number bewteen 0 and 100
