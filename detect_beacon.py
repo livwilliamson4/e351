@@ -218,7 +218,10 @@ class DetectBeacon(Node):
             #self.get_logger().info('No movement')
             self.norm_stripe = 0
             self.norm_user = 0
+            self.stop_cmd = True
             return
+        else:
+            self.stop_cmd = False
 
         # Normalising stripe width (should be [90,190]) to [0,1]. 
         if self.stripe_width > 190 or self.stripe_width == 0: # If wider than 190 pixels (closer than min following distance) or can't see (should be able to but just in case), set point to zero
@@ -237,11 +240,15 @@ class DetectBeacon(Node):
         if self.norm_stripe == 0 and self.speed == 0:
             return
   
-        # PID loops
-        pid_stripe = PID(0.7, 0.1, 0.05, setpoint=0) # 0 is vest as 190 pixels wide which is ideal following distance
+        # PID loops, more aggressive PID loop for when trailer needs to stop
+        pid_stop = PID(1, 0.1, 0.05, setpoint=0)
+        pid_stripe = PID(0.5, 0.1, 0.05, setpoint=0) # 0 is vest at 190 pixels wide which is ideal following distance
         pid_steering = PID(0.7, 0.1, 0.05, setpoint=0) # 0 is user at centre which is ideal
 
-        self.speed = round(pid_stripe(self.norm_stripe), 3)
+        if self.stop_cmd == True:
+            self.speed = round(pid_stop(self.norm_stripe), 3)
+        else:
+            self.speed = round(pid_stripe(self.norm_stripe), 3)
         self.steer = round(pid_steering(self.norm_user), 3)
 
         if self.speed > 1:
@@ -249,7 +256,7 @@ class DetectBeacon(Node):
         elif self.speed < 0:
             self.speed = 0
 
-        self.get_logger().info(f'self.speed = {self.speed}')
+        #self.get_logger().info(f'self.speed = {self.speed}')
         #self.get_logger().info(f'self.steer = {self.steer}')
         
         # Steering multipliers with +-0.05 deadband
