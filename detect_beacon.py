@@ -204,7 +204,6 @@ class DetectBeacon(Node):
             stripe_width_top = (max((x_g+w_g), (x_g2+w_g2))) - min(x_g, x_g2)
             stripe_width_bot = (max((x_p+w_p), (x_p2+w_p2))) - min(x_p, x_p2)
             self.stripe_width = round((stripe_width_top + stripe_width_bot)/2)
-            print(f'User seen. Stripe width = {self.stripe_width} pixels')
             GPIO.output(12,GPIO.HIGH)
         else:
             self.user_in_frame = False
@@ -238,6 +237,8 @@ class DetectBeacon(Node):
     def callback_do_movement(self): # inputs are normalised stripe and user values
         # Statement to not execute code if not required (i.e. set point is zero and speed is zero)
         if self.norm_stripe == 0 and self.speed == 0:
+            if self.user_in_frame == True:
+                print(f'User seen. Stripe width = {self.stripe_width} pixels. No movement required.')
             return
   
         # PID loops, more aggressive PID loop for when trailer needs to stop
@@ -251,6 +252,7 @@ class DetectBeacon(Node):
             self.speed = round(pid_stripe(self.norm_stripe), 3)
         self.steer = round(pid_steering(self.norm_user), 3)
 
+        # Keeping speed signal within [0,1] range
         if self.speed > 1:
             self.speed = 1
         elif self.speed < 0:
@@ -280,7 +282,10 @@ class DetectBeacon(Node):
         self.left_pwm.ChangeDutyCycle(left_pwm_signal)
         self.right_pwm.ChangeDutyCycle(right_pwm_signal)
 
-        print(f'Left PWM Signal: {left_pwm_signal}  Right PWM Signal: {right_pwm_signal}')
+        if self.user_in_frame == True:
+            print(f'User seen. Stripe width = {self.stripe_width} pixels. Left PWM Signal: {left_pwm_signal}  Right PWM Signal: {right_pwm_signal}')
+        else:
+            print(f'Left PWM Signal: {left_pwm_signal}  Right PWM Signal: {right_pwm_signal}')
 
         
     def callback_cam_info(self, camera_info):
