@@ -207,12 +207,13 @@ class DetectBeacon(Node):
             GPIO.output(12,GPIO.HIGH)
         else:
             self.user_in_frame = False
+            self.stripe_wdith = 0
             GPIO.output(12,GPIO.LOW)
 
 
     def callback_set_movement(self): # inputs are stripe width, user centre error, obstacle and user seen and park mode flags. outputs are 2 normalised values
         # Set PID setpoints
-        if self.obstacle_detected == True or self.user_in_frame == False or self.park_mode == True:
+        if self.obstacle_detected == True or self.park_mode == True:
             # Set all movement to zero
             #self.get_logger().info('No movement')
             self.norm_stripe = 0
@@ -223,7 +224,7 @@ class DetectBeacon(Node):
             self.stop_cmd = False
 
         # Normalising stripe width (should be [90,190]) to [0,1]. 
-        if self.stripe_width > 190 or self.stripe_width == 0: # If wider than 190 pixels (closer than min following distance) or can't see (should be able to but just in case), set point to zero
+        if self.stripe_width > 190 or self.stripe_width == 0: # If wider than 190 pixels (closer than min following distance) or can't see, set point to zero
             self.norm_stripe = 0
         #elif self.stripe_width < 90:
             #self.norm_stripe = 1
