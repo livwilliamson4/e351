@@ -190,24 +190,24 @@ class DetectBeacon(Node):
         else:
             x_p = y_p = w_p = h_p = sec_lrg_contour = x_p2 = y_p2 = w_p2 = h_p2 = x_p_mid = y_p_mid = 0
 
-        # Determining centre of user
+        # Determining difference between x values of mid point of green and pink patches
         if x_g_mid != 0 and x_p_mid != 0:
             x_mid_diff = abs(x_g_mid - x_p_mid)
-            self.centre_of_user = (x_g_mid + x_p_mid)/2
         else:
-            x_mid_diff = 10
-            self.centre_of_user = 0
+            x_mid_diff = 10 # Just needs to be a value grater than 5 for purpose of below if statement
 
         # Is the user seen?
         if x_mid_diff < 5 and y_g_mid < y_p_mid and y_g_mid != 0: # y values are zero at top and max at bottom. therefore if green is above pink its y value is LESS
             self.user_in_frame = True
+            self.centre_of_user = (x_g_mid + x_p_mid)/2
             stripe_width_top = (max((x_g+w_g), (x_g2+w_g2))) - min(x_g, x_g2)
             stripe_width_bot = (max((x_p+w_p), (x_p2+w_p2))) - min(x_p, x_p2)
             self.stripe_width = round((stripe_width_top + stripe_width_bot)/2)
             GPIO.output(12,GPIO.HIGH)
         else:
             self.user_in_frame = False
-            self.stripe_wdith = 0
+            self.centre_of_user = 0
+            self.stripe_width = 0
             GPIO.output(12,GPIO.LOW)
 
 
