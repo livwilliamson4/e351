@@ -35,6 +35,7 @@ class DetectBeacon(Node):
         self.speed = 0
         self.steer = 0
         self.lidar_distance = 1
+        self.stripe_width = 0
 
         print('Now in park mode.')
 
