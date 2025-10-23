@@ -4,8 +4,7 @@ import imutils
 import numpy as np
 import cv2
 import RPi.GPIO as GPIO
-from sensor_msgs.msg import Image
-from sensor_msgs.msg import CameraInfo
+from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 from simple_pid import PID
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
