@@ -233,8 +233,8 @@ class DetectBeacon(Node):
         else:
             self.norm_stripe = (self.stripe_width - 190)/100
 
-        # Normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
-        self.norm_user = (self.centre_of_user - 320)/320
+        # Normalising centre of user (should be [0,640]) to [-2,2]. camera width = 640, therefore centre = 640/2 = 320
+        self.norm_user = (self.centre_of_user - 320)/160 # /320 = [-1,1]. therefore, /160 = [-2,2]
 
 
     def callback_do_movement(self): # inputs are normalised stripe and user values
@@ -255,21 +255,21 @@ class DetectBeacon(Node):
             self.speed = round(pid_stripe(self.norm_stripe), 3)
         self.steer = round(pid_steering(self.norm_user), 3)
 
-        # Keeping speed signal within [0,1] range
+        # Keeping speed signal within [0.1,1] range, struggles with low speeds
         if self.speed > 1:
             self.speed = 1
-        elif self.speed < 0.2:
+        elif self.speed < 0.1:
             self.speed = 0
 
         #self.get_logger().info(f'self.speed = {self.speed}')
         #self.get_logger().info(f'self.steer = {self.steer}')
         
         # Steering multipliers with +-0.05 deadband
-        if self.steer > -1 and self.steer < -0.05:
+        if self.steer > -2 and self.steer < -0.05:
             left_mult = 1 + self.steer
             right_mult = 1
             #self.get_logger().info(f'Veering left by {left_mult}')
-        elif self.steer > 0.05 and self.steer < 1:
+        elif self.steer > 0.05 and self.steer < 2:
             left_mult = 1
             right_mult = 1 - self.steer
             #self.get_logger().info(f'Veering right by {right_mult}')
