@@ -232,8 +232,8 @@ class DetectBeacon(Node):
         else:
             self.norm_stripe = (self.stripe_width - 190)/100
 
-        # Normalising centre of user (should be [0,640]) to [-2,2]. camera width = 640, therefore centre = 640/2 = 320
-        self.norm_user = (self.centre_of_user - 320)/160 # /320 = [-1,1]. therefore, /160 = [-2,2]
+        # Normalising centre of user (should be [0,640]) to [-1,1]. camera width = 640, therefore centre = 640/2 = 320
+        self.norm_user = (self.centre_of_user - 320)/320 # /320 = [-1,1]
 
 
     def callback_do_movement(self): # inputs are normalised stripe and user values
@@ -245,7 +245,7 @@ class DetectBeacon(Node):
   
         # PID loops, more aggressive PID loop for when trailer needs to stop
         pid_stop = PID(1, 0.1, 0.05, setpoint=0)
-        pid_stripe = PID(0.5, 0.1, 0.05, setpoint=0) # 0 is vest at 190 pixels wide which is ideal following distance
+        pid_stripe = PID(0.4, 0.1, 0.05, setpoint=0) # 0 is vest at 190 pixels wide which is ideal following distance
         pid_steering = PID(0.9, 0.1, 0.05, setpoint=0) # 0 is user at centre which is ideal
 
         if self.stop_cmd == True:
@@ -264,11 +264,11 @@ class DetectBeacon(Node):
         #self.get_logger().info(f'self.steer = {self.steer}')
         
         # Steering multipliers with +-0.05 deadband
-        if self.steer > -2 and self.steer < -0.05:
+        if self.steer > -1 and self.steer < -0.05:
             left_mult = 1 + self.steer
             right_mult = 1
             #self.get_logger().info(f'Veering left by {left_mult}')
-        elif self.steer > 0.05 and self.steer < 2:
+        elif self.steer > 0.05 and self.steer < 1:
             left_mult = 1
             right_mult = 1 - self.steer
             #self.get_logger().info(f'Veering right by {right_mult}')
