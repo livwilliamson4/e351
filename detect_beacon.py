@@ -4,7 +4,7 @@ import imutils
 import numpy as np
 import cv2
 import RPi.GPIO as GPIO
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image, CameraInfo, Range
 from cv_bridge import CvBridge
 from simple_pid import PID
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
@@ -18,7 +18,7 @@ class DetectBeacon(Node):
 
         # Initialising subscribers
         self.subscriber_colour = self.create_subscription(Image, '/image_raw', self.callback_imgpro, qos_policy)
-        #self.subscriber_depth = self.create_subscription(Image, '/intel_realsense_r200_depth/depth/image_raw', self.callback_depth, qos_policy)
+        self.subscriber_lidar = self.create_subscription(Range, 'tf_luna/range', self.callback_depth, qos_policy)
         self.subscriber_camera_info = self.create_subscription(CameraInfo, '/camera_info', self.callback_cam_info, qos_policy)
 
         # Initialising flags        
@@ -36,6 +36,7 @@ class DetectBeacon(Node):
         self.lidar_distance = 1
         self.stripe_width = 0
         self.centre_of_user = 320
+        self.lidar_error = False
 
         print('Now in park mode.')
 
@@ -82,11 +83,16 @@ class DetectBeacon(Node):
         elif button_on == 0 and self.button_latch == True:
             self.button_latch = False
 
-    def callback_depth(self):
+    def callback_depth(self, lidar_output):
         if self.park_mode == True:
             return
         
-        #self.lidar_distance = GPIO.input(X) # may need to scale
+        self.lidar_distance = lidar_output.range 
+
+        if self.lidar_distance <=0 and self.lidar_error == False:
+            print ('LiDAR error. Obstacle avoidance not in use.')
+            self.lidar_error = True
+            return
         
         if self.lidar_distance < 0.3:
             self.obstacle_detected = True
