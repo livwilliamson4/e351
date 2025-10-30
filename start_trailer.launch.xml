@@ -1,0 +1,13 @@
+<launch>
+<!--  Executable - Start Camera  -->
+<executable cmd="ros2 run v4l2_camera v4l2_camera_node --ros-args -p image_size:="[640,480]""/>
+  
+<!--  Executable - Start LiDAR Node  -->
+<node name="lidar_node" pkg="e351" exec="lidar_node" output="screen">
+</node>
+  
+<!--  My Node  -->
+<node name="detect_beacon" pkg="e351" exec="detect_beacon" output="screen">
+</node>
+
+</launch>
